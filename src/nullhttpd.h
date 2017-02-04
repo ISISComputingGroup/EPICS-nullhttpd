@@ -26,9 +26,9 @@
 #include <time.h>
 #include <sys/stat.h>
 #ifdef WIN32
-	#pragma comment(lib, "libcmt.lib")
+//	#pragma comment(lib, "libcmt.lib")
 	#pragma comment(lib, "wsock32.lib")
-	#define _MT 1
+//	#define _MT 1
 	#include <winsock.h>
 	#include <windows.h>
 	#include <process.h>
