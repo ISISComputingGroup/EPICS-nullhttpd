@@ -27,7 +27,7 @@ unsigned sleep(unsigned seconds)
 }
 
 /* Garbage collection */
-void free_dircontents(struct _dircontents *dp)
+static void free_dircontents(struct _dircontents *dp)
 {
 	struct _dircontents *odp;
 
@@ -45,13 +45,13 @@ DIR* opendir(const char *name)
 	struct _dircontents *dp;
 	char name_buf[_MAX_PATH + 1];
 	char *slash = "";
-	long hFile;
+	intptr_t hFile;
 
 	if (!name) {
 		name="";
 	} else if (*name) {
 		const char *s;
-		int l = strlen (name);
+		size_t l = strlen (name);
 
 		s=name+l-1;
 		if ( !(l == 2 && *s == ':') && *s != '\\' && *s != '/')
@@ -63,7 +63,7 @@ DIR* opendir(const char *name)
 		return (DIR *)0;
 	dirp->dd_loc=0;
 	dirp->dd_contents=dirp->dd_cp=(struct _dircontents *)0;
-	if ((hFile = _findfirst (name_buf, &find_buf)) < 0) {
+	if ( (hFile = _findfirst (name_buf, &find_buf)) == -1 ) {
 		free(dirp);
 		return (DIR *)0;
 	}
@@ -107,7 +107,7 @@ struct direct *readdir(DIR *dirp)
 
 	if (dirp->dd_cp == (struct _dircontents *)0)
 		return (struct direct *)0;
-	dp.d_namlen = dp.d_reclen = strlen (strcpy (dp.d_name, dirp->dd_cp->_d_entry));
+	dp.d_namlen = dp.d_reclen = (int)strlen (strcpy (dp.d_name, dirp->dd_cp->_d_entry));
 #if 0 /* JB */
 	strlwr (dp.d_name);		/* JF */
 #endif
@@ -138,7 +138,7 @@ int gettimeofday(struct timeval *tv, struct timezone *tz)
 //	tz->tz_minuteswest=TimeZoneInformation.Bias+TimeZoneInformation.DaylightBias;
 	tz->tz_minuteswest=TimeZoneInformation.Bias;
 	ftime(&timebuffer);
-	tv->tv_sec=timebuffer.time;
+	tv->tv_sec=timebuffer.time; /* tv_sec is long not time_t on win32, will fail on win32 after 2038 */
 	tv->tv_usec=0;
 	return 0;
 }
@@ -180,7 +180,6 @@ int pthread_cond_signal(pthread_cond_t *cond)
 	return 0;
 }
 */
-/* fuck you, mysql */
 
 int pthread_attr_init(pthread_attr_t *connect_att)
 {
@@ -216,7 +215,7 @@ int pthread_create(pthread_t *thread_id, pthread_attr_t *attr, unsigned (__stdca
 //	hThread=(HANDLE)_beginthread(func, attr->dwStackSize?attr->dwStackSize:65535, param);
 //	hThread=(HANDLE)_beginthreadex(0, 65536L, func, param, CREATE_SUSPENDED, &id);
 	hThread=(HANDLE)_beginthreadex(NULL, attr->dwStackSize?attr->dwStackSize:65535, func, param, 0, &id);
-	if ((long)hThread==-1L) {
+	if (hThread == 0) {
 		return (errno?errno:-1);
 	}
 	*thread_id=hThread;

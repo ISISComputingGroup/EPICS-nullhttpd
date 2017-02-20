@@ -27,7 +27,7 @@
 #include <sys/stat.h>
 #ifdef WIN32
 //	#pragma comment(lib, "libcmt.lib")
-	#pragma comment(lib, "wsock32.lib")
+	#pragma comment(lib, "ws2_32.lib")
 //	#define _MT 1
 	#include <winsock.h>
 	#include <windows.h>
@@ -41,6 +41,13 @@
 	#define vsnprintf _vsnprintf
 	#define strcasecmp stricmp
 	#define strncasecmp strnicmp
+	/* these are to avoid a clash with opendir() etc defined elsewhere */
+	#define opendir nullhttpd_win32_opendir
+	#define closedir nullhttpd_win32_closedir
+	#define readdir nullhttpd_win32_readdir
+	#define seekdir nullhttpd_win32_seekdir
+	#define gettimeofday nullhttpd_win32_gettimeofday
+	#define sleep nullhttpd_win32_sleep
 #else
 	#include <dirent.h>
 	#include <netdb.h>
@@ -180,7 +187,11 @@ typedef struct {
 typedef struct {
 	pthread_t handle;
 	unsigned long int id;
-	short int socket;
+#ifdef WIN32
+    SOCKET socket;
+#else
+	int socket;
+#endif
 	struct sockaddr_in ClientAddr;
 	time_t ctime; // Creation time
 	time_t atime; // Last Access time
@@ -188,8 +199,13 @@ typedef struct {
 	CONNDATA *dat;
 } CONNECTION;
 typedef struct {
-	int in;
+#ifdef WIN32
+	HANDLE in;
+	HANDLE out;
+#else
+	int in;  /* so large enough to take a HANDLE on WIN32 64bit */
 	int out;
+#endif
 } pipe_fd;
 
 /* global vars */

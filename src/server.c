@@ -21,8 +21,10 @@
 #ifdef WIN32
 static WSADATA wsaData;
 #define socklen_t int
-#endif
+static SOCKET ListenSocket;
+#else
 static int ListenSocket;
+#endif
 
 void logaccess(int loglevel, const char *format, ...)
 {
@@ -33,6 +35,7 @@ void logaccess(int loglevel, const char *format, ...)
 	FILE *fp;
 	struct timeval ttime;
 	struct timezone tzone;
+    time_t timer; /* on win32 tv_sec is long not time_t */
 
 	if (loglevel>config.server_loglevel) return;
 	snprintf(file, sizeof(file)-1, "%s/access.log", config.server_etc_dir);
@@ -43,7 +46,8 @@ void logaccess(int loglevel, const char *format, ...)
 		vsnprintf(logbuffer, sizeof(logbuffer)-1, format, ap);
 		va_end(ap);
 		gettimeofday(&ttime, &tzone);
-		strftime(timebuffer, sizeof(timebuffer), "%b %d %H:%M:%S", localtime(&ttime.tv_sec));
+        timer = ttime.tv_sec; /* will fail on win32 after 2038 */
+		strftime(timebuffer, sizeof(timebuffer), "%b %d %H:%M:%S", localtime(&timer));
 		fprintf(fp, "%s - [%d] %s\n", timebuffer, loglevel, logbuffer);
 		fclose(fp);
 	}
@@ -58,6 +62,7 @@ void logerror(const char *format, ...)
 	FILE *fp;
 	struct timeval ttime;
 	struct timezone tzone;
+    time_t timer; /* on win32 tv_sec is long not time_t */
 
 	snprintf(file, sizeof(file)-1, "%s/error.log", config.server_etc_dir);
 	fixslashes(file);
@@ -67,7 +72,8 @@ void logerror(const char *format, ...)
 		vsnprintf(logbuffer, sizeof(logbuffer)-1, format, ap);
 		va_end(ap);
 		gettimeofday(&ttime, &tzone);
-		strftime(timebuffer, sizeof(timebuffer), "%b %d %H:%M:%S", localtime(&ttime.tv_sec));
+        timer = ttime.tv_sec;
+		strftime(timebuffer, sizeof(timebuffer), "%b %d %H:%M:%S", localtime(&timer));
 		fprintf(fp, "%s - %s\n", timebuffer, logbuffer);
 		fclose(fp);
 	}
@@ -289,7 +295,11 @@ void server_shutdown()
 {
 	logaccess(0, "Stopping %s", SERVER_NAME);
 	stopping = 1;
+#ifdef WIN32
+	closesocket(ListenSocket);
+#else
 	close(ListenSocket);
+#endif
 	fflush(stdout);
 /*	exit(0);*/
 }
@@ -440,11 +450,11 @@ int sockinit()
 #ifdef WIN32
 void CGIkilltimer(void *x)
 {
-	int idleseconds;
+	double idleseconds;
 
 	for (;;) {
 		sleep(5);
-		idleseconds=time((time_t*)0)-conn[0].atime;
+		idleseconds=difftime(time((time_t*)0),conn[0].atime);
 		if (idleseconds>config.server_maxidle) break;
 	}
 	logaccess(4, "CGI is idle for more than %d seconds.  Terminating.", config.server_maxidle);
@@ -486,7 +496,7 @@ void WSAReaper(void *x)
 	short int connections;
 	short int i;
 	char junk[10];
-	int rc;
+	DWORD rc;
 	time_t ctime;
 
 	for (;;) {
@@ -502,7 +512,7 @@ void WSAReaper(void *x)
 			shutdown(conn[i].socket, 2);
 			while (recv(conn[i].socket, junk, sizeof(junk), 0)>0) { };
 			closesocket(conn[i].socket);
-			TerminateThread(conn[i].handle, (DWORD)&rc);
+			TerminateThread(conn[i].handle, 1);
 			CloseHandle(conn[i].handle);
 			if (conn[i].PostData!=NULL) free(conn[i].PostData);
 			if (conn[i].dat!=NULL) free(conn[i].dat);
