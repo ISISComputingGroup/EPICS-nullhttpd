@@ -242,7 +242,6 @@ int closeconnect(int sid, int exitflag)
 	char junk[16];
 	int rc;
 #endif
-
 	flushbuffer(sid);
 #ifdef WIN32
 	/* shutdown(x,0=recv, 1=send, 2=both) */
@@ -256,7 +255,10 @@ int closeconnect(int sid, int exitflag)
 	if (exitflag) {
 	logaccess(4, "Closing [%u][%u]", conn[sid].id, conn[sid].socket);
 #ifdef WIN32
-		CloseHandle(conn[sid].handle);
+        if (conn[sid].handle != NULL)
+        {
+		    CloseHandle(conn[sid].handle);
+        }
 #endif
 		if (conn[sid].PostData!=NULL) free(conn[sid].PostData);
 		if (conn[sid].dat!=NULL) free(conn[sid].dat);
@@ -512,8 +514,11 @@ void WSAReaper(void *x)
 			shutdown(conn[i].socket, 2);
 			while (recv(conn[i].socket, junk, sizeof(junk), 0)>0) { };
 			closesocket(conn[i].socket);
-			TerminateThread(conn[i].handle, 1);
-			CloseHandle(conn[i].handle);
+			if (conn[i].handle != NULL)
+			{
+				TerminateThread(conn[i].handle, 1);
+				CloseHandle(conn[i].handle);
+			}
 			if (conn[i].PostData!=NULL) free(conn[i].PostData);
 			if (conn[i].dat!=NULL) free(conn[i].dat);
 			memset((char *)&conn[i], 0, sizeof(conn[i]));
@@ -556,7 +561,10 @@ unsigned htloop(void *x)
 	closeconnect(sid, 0);
 	logaccess(4, "Closing [%u][%u]", conn[sid].id, conn[sid].socket);
 #ifdef WIN32
-	CloseHandle((HANDLE)conn[sid].handle);
+    if (conn[sid].handle != NULL)
+    {
+	    CloseHandle((HANDLE)conn[sid].handle);
+    }
 #endif
 	if (conn[sid].PostData!=NULL) free(conn[sid].PostData);
 	if (conn[sid].dat!=NULL) free(conn[sid].dat);
