@@ -64,6 +64,17 @@
 	#include <sys/wait.h>
 #endif
 
+#ifdef NULLHTTPD_DYNAMIC
+#ifdef NULLHTTPD_EXPORTS
+#include <epicsExport.h>
+#else
+#include <shareLib.h>
+#endif
+#define NULLHTTPD_SHARE epicsShareExtern
+#else
+#define NULLHTTPD_SHARE
+#endif
+
 /* #defines and typedefs */
 #ifdef WIN32
 #define APPTITLE	"Null httpd"
@@ -286,8 +297,8 @@ int closeconnect(int sid, int exitflag);
 void server_shutdown();
 int sockinit(void);
 void cgiinit(void);
-void init(void);
+NULLHTTPD_SHARE void init(void);
 #ifdef WIN32
-void WSAReaper(void *x);
+NULLHTTPD_SHARE void WSAReaper(void *x);
 #endif
-void accept_loop(void *x);
+NULLHTTPD_SHARE void accept_loop(void *x);

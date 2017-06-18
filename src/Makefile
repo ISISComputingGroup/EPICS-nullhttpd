@@ -3,7 +3,7 @@ include $(TOP)/configure/CONFIG
 
 LIBRARY_IOC += nullhttpd
 
-USR_CFLAGS_WIN32 += -DWIN32
+USR_CFLAGS_WIN32 += -DWIN32 -DNULLHTTPD_EXPORTS -DNULLHTTPD_DYNAMIC
 
 INC += nullhttpd.h
 nullhttpd_SRCS += cgi.c
