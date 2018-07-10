@@ -273,7 +273,7 @@ int cgi_main()
 	}
 	conn[sid].dat->out_headdone=1;
 	conn[sid].dat->out_status=200;
-	if (strcasestr(conn[sid].dat->in_Protocol, "HTTP/1.1")!=NULL) {
+	if (nullhttpd_strcasestr(conn[sid].dat->in_Protocol, "HTTP/1.1")!=NULL) {
 		snprintf(conn[sid].dat->out_Protocol, sizeof(conn[sid].dat->out_Protocol)-1, "HTTP/1.1");
 	} else {
 		snprintf(conn[sid].dat->out_Protocol, sizeof(conn[sid].dat->out_Protocol)-1, "HTTP/1.0");
